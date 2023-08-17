@@ -2,16 +2,19 @@ package s3
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"io/ioutil"
+	"io"
 )
 
 func Singleton() Service {
 	return Service{
-		PutObject: PutObject,
-		GetObject: GetObject,
+		PutObject:  PutObject,
+		GetObject:  GetObject,
+		ToJsonFile: ToJsonFile,
 	}
 }
 func CreateConnection() *s3.S3 {
@@ -49,7 +52,26 @@ func GetObject(bucket string, key string) ([]byte, error) {
 		return nil, err
 	}
 
-	raw, err2 := ioutil.ReadAll(output.Body)
+	raw, err2 := io.ReadAll(output.Body)
 
 	return raw, err2
+}
+
+func ToJsonFile(bucket string, key string, data interface{}) error {
+	str, err := json.Marshal(data)
+
+	if err != nil {
+		return err
+	}
+
+	if 0 >= len(bucket) {
+		return errors.New("no bucket specified")
+	}
+	err = PutObject(bucket, key, str)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
